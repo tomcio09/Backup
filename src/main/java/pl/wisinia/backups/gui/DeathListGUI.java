@@ -20,9 +20,7 @@ public class DeathListGUI {
 
     private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
 
-    // Cache: AdminUUID -> nick docelowego gracza
     private static final Map<UUID, String> adminTargetCache = new HashMap<>();
-    // Cache: AdminUUID -> indeks śmierci kliknięty
     private static final Map<UUID, Integer> deathIndexCache = new HashMap<>();
 
     public static void open(WisiniaBackups plugin, Player admin, String targetName) {
@@ -35,7 +33,7 @@ public class DeathListGUI {
         }
 
         Inventory inv = Bukkit.createInventory(null, 54,
-                noItalic(LEGACY.deserialize("&8Śmierci " + targetName)));
+                text("&8Śmierci " + targetName));
 
         for (int i = 0; i < Math.min(records.size(), 54); i++) {
             DeathRecord record = records.get(i);
@@ -57,41 +55,36 @@ public class DeathListGUI {
             default -> rodzajText = "&7Nieznany";
         }
 
-        // Zawsze flower_banner_pattern
         ItemStack banner = new ItemStack(Material.FLOWER_BANNER_PATTERN);
         ItemMeta meta = banner.getItemMeta();
         if (meta == null) return banner;
 
         String dataFormatted = formatDate(record.getDeathTime());
 
-        // Nazwa bez kursywy
-        meta.displayName(noItalic(LEGACY.deserialize(rodzajText + " &7" + dataFormatted)));
+        meta.displayName(text(rodzajText + " &7" + dataFormatted));
 
-        // Lore bez kursywy
         List<Component> lore = new ArrayList<>();
-        lore.add(noItalic(LEGACY.deserialize(" &8» &fRodzaj: " + rodzajText)));
-        lore.add(noItalic(LEGACY.deserialize(" &8» &fData: &7" + dataFormatted)));
+        lore.add(text(" &8» &fRodzaj: " + rodzajText));
+        lore.add(text(" &8» &fData: &7" + dataFormatted));
 
-        // Zabójca - tylko przy KILL lub LOGOUT z killerem
         if ((record.getDeathType() == DeathRecord.DeathType.KILL ||
                 record.getDeathType() == DeathRecord.DeathType.LOGOUT)
                 && record.getKillerUUID() != null) {
 
             String killerDisplay = getKillerDisplay(record.getKillerUUID(), record.getKillerName());
-            lore.add(noItalic(LEGACY.deserialize(" &8» &fZabójca: &c" + killerDisplay)));
+            lore.add(text(" &8» &fZabójca: &c" + killerDisplay));
         }
 
-        // Status
         String statusText = switch (record.getBackupStatus()) {
             case RECEIVED -> "&aOdebrany";
             case PENDING -> "&6Oczekujący";
             case NONE -> "&cBrak";
         };
 
-        lore.add(noItalic(LEGACY.deserialize(" &8» &fStatus: " + statusText)));
-        lore.add(noItalic(Component.empty()));
-        lore.add(noItalic(LEGACY.deserialize(" &8» &7Naciśnij, aby przejść")));
-        lore.add(noItalic(LEGACY.deserialize(" &8» &7do &cśmierci&7!")));
+        lore.add(text(" &8» &fStatus: " + statusText));
+        lore.add(text(""));
+        lore.add(text(" &8» &7Naciśnij, aby przejść"));
+        lore.add(text(" &8» &7do &cśmierci&7!"));
 
         meta.lore(lore);
         banner.setItemMeta(meta);
@@ -169,8 +162,16 @@ public class DeathListGUI {
         return null;
     }
 
-    // Helper - wyłącza kursywę na komponencie
-    public static Component noItalic(Component component) {
-        return component.decoration(TextDecoration.ITALIC, false);
+    /**
+     * Tworzy komponent z wyłączoną kursywą.
+     * Opakowuje w rodzica z ITALIC=false, dzieci dziedziczą.
+     */
+    public static Component text(String legacyText) {
+        if (legacyText.isEmpty()) {
+            return Component.empty().decoration(TextDecoration.ITALIC, false);
+        }
+        return Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(LEGACY.deserialize(legacyText));
     }
 }
