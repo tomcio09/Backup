@@ -1,6 +1,7 @@
 package pl.wisinia.backups.gui;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -34,7 +35,7 @@ public class DeathListGUI {
         }
 
         Inventory inv = Bukkit.createInventory(null, 54,
-                LEGACY.deserialize("&8Śmierci " + targetName));
+                noItalic(LEGACY.deserialize("&8Śmierci " + targetName)));
 
         for (int i = 0; i < Math.min(records.size(), 54); i++) {
             DeathRecord record = records.get(i);
@@ -47,38 +48,29 @@ public class DeathListGUI {
     }
 
     private static ItemStack createDeathBanner(DeathRecord record) {
-        Material bannerMaterial;
         String rodzajText;
 
         switch (record.getDeathType()) {
-            case SUICIDE -> {
-                bannerMaterial = Material.RED_BANNER;
-                rodzajText = "&cSamobójstwo";
-            }
-            case KILL -> {
-                bannerMaterial = Material.PURPLE_BANNER;
-                rodzajText = "&5Zabójstwo";
-            }
-            case LOGOUT -> {
-                bannerMaterial = Material.MAGENTA_BANNER;
-                rodzajText = "&4Wylogowanie się";
-            }
-            default -> {
-                bannerMaterial = Material.WHITE_BANNER;
-                rodzajText = "&7Nieznany";
-            }
+            case SUICIDE -> rodzajText = "&cSamobójstwo";
+            case KILL -> rodzajText = "&5Zabójstwo";
+            case LOGOUT -> rodzajText = "&4Wylogowanie się";
+            default -> rodzajText = "&7Nieznany";
         }
 
-        ItemStack banner = new ItemStack(bannerMaterial);
+        // Zawsze flower_banner_pattern
+        ItemStack banner = new ItemStack(Material.FLOWER_BANNER_PATTERN);
         ItemMeta meta = banner.getItemMeta();
         if (meta == null) return banner;
 
         String dataFormatted = formatDate(record.getDeathTime());
-        meta.displayName(LEGACY.deserialize(rodzajText + " &7" + dataFormatted));
 
+        // Nazwa bez kursywy
+        meta.displayName(noItalic(LEGACY.deserialize(rodzajText + " &7" + dataFormatted)));
+
+        // Lore bez kursywy
         List<Component> lore = new ArrayList<>();
-        lore.add(LEGACY.deserialize(" &8» &fRodzaj: " + rodzajText));
-        lore.add(LEGACY.deserialize(" &8» &fData: &7" + dataFormatted));
+        lore.add(noItalic(LEGACY.deserialize(" &8» &fRodzaj: " + rodzajText)));
+        lore.add(noItalic(LEGACY.deserialize(" &8» &fData: &7" + dataFormatted)));
 
         // Zabójca - tylko przy KILL lub LOGOUT z killerem
         if ((record.getDeathType() == DeathRecord.DeathType.KILL ||
@@ -86,7 +78,7 @@ public class DeathListGUI {
                 && record.getKillerUUID() != null) {
 
             String killerDisplay = getKillerDisplay(record.getKillerUUID(), record.getKillerName());
-            lore.add(LEGACY.deserialize(" &8» &fZabójca: &c" + killerDisplay));
+            lore.add(noItalic(LEGACY.deserialize(" &8» &fZabójca: &c" + killerDisplay)));
         }
 
         // Status
@@ -96,10 +88,10 @@ public class DeathListGUI {
             case NONE -> "&cBrak";
         };
 
-        lore.add(LEGACY.deserialize(" &8» &fStatus: " + statusText));
-        lore.add(Component.empty());
-        lore.add(LEGACY.deserialize(" &8» &7Naciśnij, aby przejść"));
-        lore.add(LEGACY.deserialize(" &8» &7do &cśmierci&7!"));
+        lore.add(noItalic(LEGACY.deserialize(" &8» &fStatus: " + statusText)));
+        lore.add(noItalic(Component.empty()));
+        lore.add(noItalic(LEGACY.deserialize(" &8» &7Naciśnij, aby przejść")));
+        lore.add(noItalic(LEGACY.deserialize(" &8» &7do &cśmierci&7!")));
 
         meta.lore(lore);
         banner.setItemMeta(meta);
@@ -121,7 +113,7 @@ public class DeathListGUI {
         return killerName;
     }
 
-    private static String formatDate(LocalDateTime time) {
+    public static String formatDate(LocalDateTime time) {
         String[] polishMonths = {
                 "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
                 "lipca", "sierpnia", "września", "października", "listopada", "grudnia"
@@ -138,7 +130,6 @@ public class DeathListGUI {
     public static void handleClick(WisiniaBackups plugin, Player admin, int slot, String title) {
         String targetName = adminTargetCache.getOrDefault(admin.getUniqueId(), null);
         if (targetName == null) {
-            // Spróbuj wyciągnąć z tytułu (§8 to section sign z serwera)
             String rawTitle = title.replace("§8", "");
             if (rawTitle.startsWith("Śmierci ")) {
                 targetName = rawTitle.substring("Śmierci ".length());
@@ -167,16 +158,19 @@ public class DeathListGUI {
     }
 
     public static UUID getUUIDByName(String name) {
-        // Najpierw sprawdź online
         Player online = Bukkit.getPlayerExact(name);
         if (online != null) return online.getUniqueId();
 
-        // Potem offline
         for (OfflinePlayer op : Bukkit.getOfflinePlayers()) {
             if (op.getName() != null && name.equalsIgnoreCase(op.getName())) {
                 return op.getUniqueId();
             }
         }
         return null;
+    }
+
+    // Helper - wyłącza kursywę na komponencie
+    public static Component noItalic(Component component) {
+        return component.decoration(TextDecoration.ITALIC, false);
     }
 }
