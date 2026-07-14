@@ -1,0 +1,23 @@
+name: WisiniaBackups
+version: '${project.version}'
+main: pl.wisinia.backups.WisiniaBackups
+api-version: '1.21'
+description: Plugin do backupów itemów po śmierci gracza
+authors: [ Wisinia ]
+
+softdepend:
+  - AnacodeAntylogout
+
+commands:
+  backup:
+    description: Otwiera GUI backupów gracza
+    usage: /backup <nick>
+    permission: backup.admin
+  odbierzbackup:
+    description: Odbierz swój backup
+    usage: /odbierzbackup
+
+permissions:
+  backup.admin:
+    description: Dostęp do komendy /backup
+    default: op
