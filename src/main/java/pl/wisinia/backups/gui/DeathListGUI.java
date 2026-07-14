@@ -4,45 +4,30 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import pl.wisinia.backups.WisiniaBackups;
 import pl.wisinia.backups.data.DeathRecord;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class DeathListGUI {
 
     private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
 
-    // Cache: PlayerUUID -> nick docelowego gracza
+    // Cache: AdminUUID -> nick docelowego gracza
     private static final Map<UUID, String> adminTargetCache = new HashMap<>();
-    // Cache: PlayerUUID -> slot kliknięty (indeks śmierci)
+    // Cache: AdminUUID -> indeks śmierci kliknięty
     private static final Map<UUID, Integer> deathIndexCache = new HashMap<>();
 
     public static void open(WisiniaBackups plugin, Player admin, String targetName) {
         List<DeathRecord> records = new ArrayList<>();
 
-        // Znajdź UUID gracza po nicku
-        Player target = Bukkit.getPlayerExact(targetName);
-        UUID targetUUID = null;
-
-        if (target != null) {
-            targetUUID = target.getUniqueId();
-        } else {
-            // Szukaj w offline players
-            for (org.bukkit.OfflinePlayer op : Bukkit.getOfflinePlayers()) {
-                if (targetName.equalsIgnoreCase(op.getName())) {
-                    targetUUID = op.getUniqueId();
-                    break;
-                }
-            }
-        }
+        UUID targetUUID = getUUIDByName(targetName);
 
         if (targetUUID != null) {
             records = plugin.getDataManager().getDeathRecords(targetUUID);
@@ -53,7 +38,7 @@ public class DeathListGUI {
 
         for (int i = 0; i < Math.min(records.size(), 54); i++) {
             DeathRecord record = records.get(i);
-            ItemStack banner = createDeathBanner(record, plugin, targetUUID);
+            ItemStack banner = createDeathBanner(record);
             inv.setItem(i, banner);
         }
 
@@ -61,8 +46,7 @@ public class DeathListGUI {
         admin.openInventory(inv);
     }
 
-    private static ItemStack createDeathBanner(DeathRecord record, WisiniaBackups plugin, UUID targetUUID) {
-        // Ustal kolor bannera i typ śmierci
+    private static ItemStack createDeathBanner(DeathRecord record) {
         Material bannerMaterial;
         String rodzajText;
 
@@ -89,11 +73,9 @@ public class DeathListGUI {
         ItemMeta meta = banner.getItemMeta();
         if (meta == null) return banner;
 
-        // Nazwa: '{Rodzaj} &7{data}'
         String dataFormatted = formatDate(record.getDeathTime());
         meta.displayName(LEGACY.deserialize(rodzajText + " &7" + dataFormatted));
 
-        // Lore
         List<Component> lore = new ArrayList<>();
         lore.add(LEGACY.deserialize(" &8» &fRodzaj: " + rodzajText));
         lore.add(LEGACY.deserialize(" &8» &fData: &7" + dataFormatted));
@@ -113,6 +95,7 @@ public class DeathListGUI {
             case PENDING -> "&6Oczekujący";
             case NONE -> "&cBrak";
         };
+
         lore.add(LEGACY.deserialize(" &8» &fStatus: " + statusText));
         lore.add(Component.empty());
         lore.add(LEGACY.deserialize(" &8» &7Naciśnij, aby przejść"));
@@ -128,19 +111,12 @@ public class DeathListGUI {
             killerName = "Nieznany";
         }
 
-        // Sprawdź czy gracz jest zbanowany
-        org.bukkit.BanList<org.bukkit.profile.PlayerProfile> banList =
-                Bukkit.getBanList(org.bukkit.BanList.Type.PROFILE);
-        
-        for (org.bukkit.ban.ProfileBanList.Entry<?> entry : banList.getEntries()) {
-            // Porównaj po UUID jeśli możliwe
-        }
-
-        // Prostsze sprawdzenie przez OfflinePlayer
-        org.bukkit.OfflinePlayer op = Bukkit.getOfflinePlayer(killerUUID);
-        if (op.isBanned()) {
-            return "Banned-&f" + killerName;
-        }
+        try {
+            OfflinePlayer op = Bukkit.getOfflinePlayer(killerUUID);
+            if (op.isBanned()) {
+                return "Banned-&f" + killerName;
+            }
+        } catch (Exception ignored) {}
 
         return killerName;
     }
@@ -156,14 +132,13 @@ public class DeathListGUI {
         int day = time.getDayOfMonth();
         String month = polishMonths[time.getMonthValue() - 1];
 
-        return String.format("&7%02d:%02d %d %s", hour, minute, day, month);
+        return String.format("%02d:%02d %d %s", hour, minute, day, month);
     }
 
     public static void handleClick(WisiniaBackups plugin, Player admin, int slot, String title) {
-        // Wyciągnij nick z tytułu GUI "§8Śmierci {nick}"
         String targetName = adminTargetCache.getOrDefault(admin.getUniqueId(), null);
         if (targetName == null) {
-            // Spróbuj wyciągnąć z tytułu
+            // Spróbuj wyciągnąć z tytułu (§8 to section sign z serwera)
             String rawTitle = title.replace("§8", "");
             if (rawTitle.startsWith("Śmierci ")) {
                 targetName = rawTitle.substring("Śmierci ".length());
@@ -192,27 +167,16 @@ public class DeathListGUI {
     }
 
     public static UUID getUUIDByName(String name) {
+        // Najpierw sprawdź online
         Player online = Bukkit.getPlayerExact(name);
         if (online != null) return online.getUniqueId();
 
-        for (org.bukkit.OfflinePlayer op : Bukkit.getOfflinePlayers()) {
-            if (name.equalsIgnoreCase(op.getName())) {
+        // Potem offline
+        for (OfflinePlayer op : Bukkit.getOfflinePlayers()) {
+            if (op.getName() != null && name.equalsIgnoreCase(op.getName())) {
                 return op.getUniqueId();
             }
         }
         return null;
-    }
-
-    public static String formatDate(LocalDateTime time, boolean dummy) {
-        // Publiczna wersja dla innych klas
-        String[] polishMonths = {
-                "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
-                "lipca", "sierpnia", "września", "października", "listopada", "grudnia"
-        };
-        int hour = time.getHour();
-        int minute = time.getMinute();
-        int day = time.getDayOfMonth();
-        String month = polishMonths[time.getMonthValue() - 1];
-        return String.format("%02d:%02d %d %s", hour, minute, day, month);
     }
 }
