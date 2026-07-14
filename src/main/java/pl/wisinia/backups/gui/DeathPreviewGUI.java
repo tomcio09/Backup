@@ -23,16 +23,14 @@ public class DeathPreviewGUI {
     private static final Map<UUID, String> previewTargetCache = new HashMap<>();
 
     public static void open(WisiniaBackups plugin, Player admin, DeathRecord record, int deathIndex, String targetName) {
-        String title = "&8Śmierć #" + record.getDeathNumber();
         Inventory inv = Bukkit.createInventory(null, 54,
-                noItalic(LEGACY.deserialize(title)));
+                text("&8Śmierć #" + record.getDeathNumber()));
 
         // Rząd 1: Zbroja + offhand
         setOrEmpty(inv, 0, record.getArmor()[3]); // Helmet
         setOrEmpty(inv, 1, record.getArmor()[2]); // Chestplate
         setOrEmpty(inv, 2, record.getArmor()[1]); // Leggings
         setOrEmpty(inv, 3, record.getArmor()[0]); // Boots
-        // Slot 4 pusty
         setOrEmpty(inv, 5, record.getOffHand());  // Offhand
 
         // Rzędy 2-4: inventory sloty 9-35
@@ -51,21 +49,20 @@ public class DeathPreviewGUI {
             }
         }
 
-        // Rząd 6: Przyciski
         // Barrier - powrót slot 49
         ItemStack barrier = new ItemStack(Material.BARRIER);
         ItemMeta barrierMeta = barrier.getItemMeta();
-        barrierMeta.displayName(noItalic(LEGACY.deserialize("&cPowrót")));
+        barrierMeta.displayName(text("&cPowrót"));
         barrier.setItemMeta(barrierMeta);
         inv.setItem(49, barrier);
 
         // Lime Dye - nadaj backup slot 53
         ItemStack limeDye = new ItemStack(Material.LIME_DYE);
         ItemMeta limeMeta = limeDye.getItemMeta();
-        limeMeta.displayName(noItalic(LEGACY.deserialize("&aNadaj backupa")));
+        limeMeta.displayName(text("&aNadaj backupa"));
         List<Component> limeLore = new ArrayList<>();
-        limeLore.add(noItalic(LEGACY.deserialize(" &8» &7Kliknij aby nadać")));
-        limeLore.add(noItalic(LEGACY.deserialize(" &8» &abackupa &7graczowi!")));
+        limeLore.add(text(" &8» &7Kliknij aby nadać"));
+        limeLore.add(text(" &8» &abackupa &7graczowi!"));
         limeMeta.lore(limeLore);
         limeDye.setItemMeta(limeMeta);
         inv.setItem(53, limeDye);
@@ -100,30 +97,30 @@ public class DeathPreviewGUI {
         if (slot == 53 && clickedItem.getType() == Material.LIME_DYE) {
             UUID targetUUID = DeathListGUI.getUUIDByName(targetName);
             if (targetUUID == null) {
-                admin.sendMessage(noItalic(LEGACY.deserialize("&cNie znaleziono gracza!")));
+                admin.sendMessage(LEGACY.deserialize("&cNie znaleziono gracza!"));
                 return;
             }
 
             if (plugin.getDataManager().hasPendingBackup(targetUUID)) {
-                admin.sendMessage(noItalic(LEGACY.deserialize("&7Ten gracz ma już &abackupa &7do oderania!")));
+                admin.sendMessage(LEGACY.deserialize("&7Ten gracz ma już &abackupa &7do oderania!"));
                 return;
             }
 
             boolean success = plugin.getBackupManager().giveBackup(targetUUID, targetName, deathIndex);
             if (success) {
-                admin.sendMessage(noItalic(LEGACY.deserialize("&7Backup został &anadany &7graczowi &f" + targetName + "&7!")));
+                admin.sendMessage(LEGACY.deserialize("&7Backup został &anadany &7graczowi &f" + targetName + "&7!"));
                 DeathListGUI.open(plugin, admin, targetName);
             } else {
-                admin.sendMessage(noItalic(LEGACY.deserialize("&7Ten gracz ma już &abackupa &7do oderania!")));
+                admin.sendMessage(LEGACY.deserialize("&7Ten gracz ma już &abackupa &7do oderania!"));
             }
             return;
         }
 
-        // Kliknięcie w item - kopiuj do admina (poza przyciskami)
+        // Kliknięcie w item - kopiuj do admina
         if (slot != 49 && slot != 53) {
             if (clickedItem != null && !clickedItem.getType().isAir()) {
                 if (admin.getInventory().firstEmpty() == -1) {
-                    admin.sendMessage(noItalic(LEGACY.deserialize("&cNie masz miejsca w ekwipunku!")));
+                    admin.sendMessage(LEGACY.deserialize("&cNie masz miejsca w ekwipunku!"));
                     return;
                 }
                 admin.getInventory().addItem(clickedItem.clone());
@@ -132,9 +129,8 @@ public class DeathPreviewGUI {
     }
 
     public static void openForPlayer(WisiniaBackups plugin, Player player, DeathRecord record) {
-        String title = "&8Backup podgląd #" + record.getDeathNumber();
         Inventory inv = Bukkit.createInventory(null, 54,
-                noItalic(LEGACY.deserialize(title)));
+                text("&8Backup podgląd #" + record.getDeathNumber()));
 
         setOrEmpty(inv, 0, record.getArmor()[3]);
         setOrEmpty(inv, 1, record.getArmor()[2]);
@@ -159,7 +155,16 @@ public class DeathPreviewGUI {
         player.openInventory(inv);
     }
 
-    public static Component noItalic(Component component) {
-        return component.decoration(TextDecoration.ITALIC, false);
+    /**
+     * Tworzy komponent z wyłączoną kursywą.
+     * Rodzic Component.empty() z ITALIC=false, dziecko dziedziczy.
+     */
+    private static Component text(String legacyText) {
+        if (legacyText.isEmpty()) {
+            return Component.empty().decoration(TextDecoration.ITALIC, false);
+        }
+        return Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(LEGACY.deserialize(legacyText));
     }
 }
