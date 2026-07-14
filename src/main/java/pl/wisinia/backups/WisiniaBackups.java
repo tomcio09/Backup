@@ -19,7 +19,10 @@ public class WisiniaBackups extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        saveDefaultConfig();
+        // Tworzenie folderu pluginu jeśli nie istnieje
+        if (!getDataFolder().exists()) {
+            getDataFolder().mkdirs();
+        }
 
         this.dataManager = new DataManager(this);
         this.backupManager = new BackupManager(this);
