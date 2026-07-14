@@ -23,54 +23,54 @@ public class BackupReceiveGUI {
     public static void open(WisiniaBackups plugin, Player player) {
         BackupData backup = plugin.getDataManager().getPendingBackup(player.getUniqueId());
         if (backup == null) {
-            player.sendMessage(noItalic(LEGACY.deserialize("&cNie masz żadnego backupa do odebrania!")));
+            player.sendMessage(LEGACY.deserialize("&cNie masz żadnego backupa do odebrania!"));
             return;
         }
 
         Inventory inv = Bukkit.createInventory(null, 27,
-                noItalic(LEGACY.deserialize("&8Backup")));
+                text("&8Backup"));
 
         // Barrel - środek GUI slot 13
         ItemStack barrel = new ItemStack(Material.BARREL);
         ItemMeta barrelMeta = barrel.getItemMeta();
-        barrelMeta.displayName(noItalic(LEGACY.deserialize("&7Itemy gracza")));
+        barrelMeta.displayName(text("&7Itemy gracza"));
         List<Component> barrelLore = new ArrayList<>();
-        barrelLore.add(noItalic(LEGACY.deserialize(" &8» &7Po kliknięciu zobaczysz")));
-        barrelLore.add(noItalic(LEGACY.deserialize(" &8» &fpreview &7backupa.")));
-        barrelLore.add(noItalic(Component.empty()));
-        barrelLore.add(noItalic(LEGACY.deserialize(" &8» &7Jeśli się on &cnie")));
-        barrelLore.add(noItalic(LEGACY.deserialize(" &8» &czgadza &7to skontaktuj")));
-        barrelLore.add(noItalic(LEGACY.deserialize(" &8» &7się z administracją oraz")));
-        barrelLore.add(noItalic(LEGACY.deserialize(" &8» &cnie odbieraj &7backupa!")));
+        barrelLore.add(text(" &8» &7Po kliknięciu zobaczysz"));
+        barrelLore.add(text(" &8» &fpreview &7backupa."));
+        barrelLore.add(text(""));
+        barrelLore.add(text(" &8» &7Jeśli się on &cnie"));
+        barrelLore.add(text(" &8» &czgadza &7to skontaktuj"));
+        barrelLore.add(text(" &8» &7się z administracją oraz"));
+        barrelLore.add(text(" &8» &cnie odbieraj &7backupa!"));
         barrelMeta.lore(barrelLore);
         barrel.setItemMeta(barrelMeta);
         inv.setItem(13, barrel);
 
-        // Lime Concrete - odbierz slot 15 (rząd 2, pozycja 6)
+        // Lime Concrete - odbierz slot 15
         ItemStack limeConcrete = new ItemStack(Material.LIME_CONCRETE);
         ItemMeta limeMeta = limeConcrete.getItemMeta();
-        limeMeta.displayName(noItalic(LEGACY.deserialize("&aOdbierz")));
+        limeMeta.displayName(text("&aOdbierz"));
         List<Component> limeLore = new ArrayList<>();
-        limeLore.add(noItalic(LEGACY.deserialize(" &8» &7Upewnij się że twój")));
-        limeLore.add(noItalic(LEGACY.deserialize(" &8» &7ekwipunek jest &apusty&7!")));
-        limeLore.add(noItalic(Component.empty()));
-        limeLore.add(noItalic(LEGACY.deserialize(" &8» &7Jeśli posiadasz &apusty")));
-        limeLore.add(noItalic(LEGACY.deserialize(" &8» &fekwipunek &7to itemy wrócą")));
-        limeLore.add(noItalic(LEGACY.deserialize(" &8» &7dokładnie na swoje miejsce,")));
-        limeLore.add(noItalic(LEGACY.deserialize(" &8» &7Jeśli nie to &cwysypią się&7!")));
+        limeLore.add(text(" &8» &7Upewnij się że twój"));
+        limeLore.add(text(" &8» &7ekwipunek jest &apusty&7!"));
+        limeLore.add(text(""));
+        limeLore.add(text(" &8» &7Jeśli posiadasz &apusty"));
+        limeLore.add(text(" &8» &fekwipunek &7to itemy wrócą"));
+        limeLore.add(text(" &8» &7dokładnie na swoje miejsce,"));
+        limeLore.add(text(" &8» &7Jeśli nie to &cwysypią się&7!"));
         limeMeta.lore(limeLore);
         limeConcrete.setItemMeta(limeMeta);
         inv.setItem(15, limeConcrete);
 
-        // Red Concrete - anuluj slot 11 (rząd 2, pozycja 2)
+        // Red Concrete - anuluj slot 11
         ItemStack redConcrete = new ItemStack(Material.RED_CONCRETE);
         ItemMeta redMeta = redConcrete.getItemMeta();
-        redMeta.displayName(noItalic(LEGACY.deserialize("&cAnuluj")));
+        redMeta.displayName(text("&cAnuluj"));
         List<Component> redLore = new ArrayList<>();
-        redLore.add(noItalic(LEGACY.deserialize(" &8» &7Możesz nie odbierać teraz")));
-        redLore.add(noItalic(LEGACY.deserialize(" &8» &7tego backupa, aby jeszcze")));
-        redLore.add(noItalic(LEGACY.deserialize(" &8» &7raz przejść do niego")));
-        redLore.add(noItalic(LEGACY.deserialize(" &8» &7wpisz &f/odbierzbackup")));
+        redLore.add(text(" &8» &7Możesz nie odbierać teraz"));
+        redLore.add(text(" &8» &7tego backupa, aby jeszcze"));
+        redLore.add(text(" &8» &7raz przejść do niego"));
+        redLore.add(text(" &8» &7wpisz &f/odbierzbackup"));
         redMeta.lore(redLore);
         redConcrete.setItemMeta(redMeta);
         inv.setItem(11, redConcrete);
@@ -85,9 +85,9 @@ public class BackupReceiveGUI {
                 player.closeInventory();
                 boolean success = plugin.getBackupManager().receiveBackup(player);
                 if (success) {
-                    player.sendMessage(noItalic(LEGACY.deserialize("&aBackup został odebrany pomyślnie!")));
+                    player.sendMessage(LEGACY.deserialize("&aBackup został odebrany pomyślnie!"));
                 } else {
-                    player.sendMessage(noItalic(LEGACY.deserialize("&cNie masz żadnego backupa do odebrania!")));
+                    player.sendMessage(LEGACY.deserialize("&cNie masz żadnego backupa do odebrania!"));
                 }
             }
             case 11 -> player.closeInventory();
@@ -126,7 +126,16 @@ public class BackupReceiveGUI {
         }
     }
 
-    public static Component noItalic(Component component) {
-        return component.decoration(TextDecoration.ITALIC, false);
+    /**
+     * Tworzy komponent z wyłączoną kursywą - opakowuje w rodzica
+     * który jawnie ustawia ITALIC na false
+     */
+    private static Component text(String legacyText) {
+        if (legacyText.isEmpty()) {
+            return Component.empty().decoration(TextDecoration.ITALIC, false);
+        }
+        return Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(LEGACY.deserialize(legacyText));
     }
 }
