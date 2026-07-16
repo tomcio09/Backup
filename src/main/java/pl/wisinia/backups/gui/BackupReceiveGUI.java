@@ -122,4 +122,16 @@ public class BackupReceiveGUI {
                     backup.getOffHand(),
                     backup.getDeathNumber()
             );
-            
+            DeathPreviewGUI.openForPlayer(plugin, player, tempRecord);
+        }
+    }
+
+    private static Component text(String legacyText) {
+        if (legacyText == null || legacyText.isEmpty()) {
+            return Component.empty().decoration(TextDecoration.ITALIC, false);
+        }
+        return Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(LEGACY.deserialize(legacyText));
+    }
+}
