@@ -2,14 +2,14 @@ package pl.wisinia.backups.api;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import pl.wisinia.backups.WisiniaBackups;
 
 import java.lang.reflect.Method;
 import java.util.UUID;
+import java.util.logging.Level;
 
 /**
  * Wrapper dla AnacodeAntylogout API
- * Używa refleksji aby uniknąć błędów gdy plugin nie jest dostępny
+ * Używa refleksji - bezpieczny gdy plugin nie jest dostępny
  */
 public class AntylogoutAPI {
 
@@ -19,29 +19,35 @@ public class AntylogoutAPI {
         NORMAL
     }
 
-    private static boolean enabled = false;
+    private static boolean available = false;
     private static Class<?> apiClass = null;
+    private static Method getDeathTypeMethod = null;
+    private static Method getKillerOfMethod = null;
+    private static Method isPlayerTaggedMethod = null;
 
+    // Cache metod refleksji - wywoływane raz
     static {
         try {
-            apiClass = Class.forName("pl.anacode.antylogout.api.AntylogoutAPI");
-            enabled = true;
-        } catch (ClassNotFoundException e) {
-            WisiniaBackups.getInstance().getLogger().warning(
-                    "AnacodeAntylogout nie jest dostępny - typy śmierci będą ograniczone."
-            );
+            if (Bukkit.getPluginManager().getPlugin("AnacodeAntylogout") != null) {
+                apiClass = Class.forName("pl.anacode.antylogout.api.AntylogoutAPI");
+                getDeathTypeMethod = apiClass.getMethod("getDeathType", UUID.class);
+                getKillerOfMethod = apiClass.getMethod("getKillerOf", UUID.class);
+                isPlayerTaggedMethod = apiClass.getMethod("isPlayerTagged", Player.class);
+                available = true;
+            }
+        } catch (Exception e) {
+            available = false;
         }
     }
 
     public static boolean isEnabled() {
-        return enabled && Bukkit.getPluginManager().getPlugin("AnacodeAntylogout") != null;
+        return available;
     }
 
     public static DeathType getDeathType(UUID uuid) {
-        if (!isEnabled() || apiClass == null) return DeathType.NORMAL;
+        if (!available || getDeathTypeMethod == null) return DeathType.NORMAL;
         try {
-            Method method = apiClass.getMethod("getDeathType", UUID.class);
-            Object result = method.invoke(null, uuid);
+            Object result = getDeathTypeMethod.invoke(null, uuid);
             if (result == null) return DeathType.NORMAL;
             String name = result.toString();
             return switch (name) {
@@ -55,22 +61,18 @@ public class AntylogoutAPI {
     }
 
     public static UUID getKillerOf(UUID uuid) {
-        if (!isEnabled() || apiClass == null) return null;
+        if (!available || getKillerOfMethod == null) return null;
         try {
-            Method method = apiClass.getMethod("getKillerOf", UUID.class);
-            Object result = method.invoke(null, uuid);
-            return (UUID) result;
+            return (UUID) getKillerOfMethod.invoke(null, uuid);
         } catch (Exception e) {
             return null;
         }
     }
 
     public static boolean isPlayerTagged(Player player) {
-        if (!isEnabled() || apiClass == null) return false;
+        if (!available || isPlayerTaggedMethod == null) return false;
         try {
-            Method method = apiClass.getMethod("isPlayerTagged", Player.class);
-            Object result = method.invoke(null, player);
-            return (boolean) result;
+            return (boolean) isPlayerTaggedMethod.invoke(null, player);
         } catch (Exception e) {
             return false;
         }
