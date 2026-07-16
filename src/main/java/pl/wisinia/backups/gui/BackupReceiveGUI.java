@@ -122,20 +122,4 @@ public class BackupReceiveGUI {
                     backup.getOffHand(),
                     backup.getDeathNumber()
             );
-            DeathPreviewGUI.openForPlayer(plugin, player, tempRecord);
-        }
-    }
-
-    /**
-     * Tworzy komponent z wyłączoną kursywą - opakowuje w rodzica
-     * który jawnie ustawia ITALIC na false
-     */
-    private static Component text(String legacyText) {
-        if (legacyText.isEmpty()) {
-            return Component.empty().decoration(TextDecoration.ITALIC, false);
-        }
-        return Component.empty()
-                .decoration(TextDecoration.ITALIC, false)
-                .append(LEGACY.deserialize(legacyText));
-    }
-}
+            
