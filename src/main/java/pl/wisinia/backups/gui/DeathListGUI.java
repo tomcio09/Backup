@@ -24,21 +24,21 @@ public class DeathListGUI {
     private static final Map<UUID, Integer> deathIndexCache = new HashMap<>();
 
     public static void open(WisiniaBackups plugin, Player admin, String targetName) {
-        List<DeathRecord> records = new ArrayList<>();
+        UUID targetUUID = plugin.getDataManager().getUUIDByName(targetName);
 
-        UUID targetUUID = getUUIDByName(targetName);
-
+        List<DeathRecord> records;
         if (targetUUID != null) {
             records = plugin.getDataManager().getDeathRecords(targetUUID);
+        } else {
+            records = new ArrayList<>();
         }
 
         Inventory inv = Bukkit.createInventory(null, 54,
                 text("&8Śmierci " + targetName));
 
-        for (int i = 0; i < Math.min(records.size(), 54); i++) {
-            DeathRecord record = records.get(i);
-            ItemStack banner = createDeathBanner(record);
-            inv.setItem(i, banner);
+        int max = Math.min(records.size(), 54);
+        for (int i = 0; i < max; i++) {
+            inv.setItem(i, createDeathBanner(records.get(i)));
         }
 
         adminTargetCache.put(admin.getUniqueId(), targetName);
@@ -112,16 +112,14 @@ public class DeathListGUI {
                 "lipca", "sierpnia", "września", "października", "listopada", "grudnia"
         };
 
-        int hour = time.getHour();
-        int minute = time.getMinute();
-        int day = time.getDayOfMonth();
-        String month = polishMonths[time.getMonthValue() - 1];
-
-        return String.format("%02d:%02d %d %s", hour, minute, day, month);
+        return String.format("%02d:%02d %d %s",
+                time.getHour(), time.getMinute(),
+                time.getDayOfMonth(),
+                polishMonths[time.getMonthValue() - 1]);
     }
 
     public static void handleClick(WisiniaBackups plugin, Player admin, int slot, String title) {
-        String targetName = adminTargetCache.getOrDefault(admin.getUniqueId(), null);
+        String targetName = adminTargetCache.get(admin.getUniqueId());
         if (targetName == null) {
             String rawTitle = title.replace("§8", "");
             if (rawTitle.startsWith("Śmierci ")) {
@@ -131,15 +129,14 @@ public class DeathListGUI {
             }
         }
 
-        UUID targetUUID = getUUIDByName(targetName);
+        UUID targetUUID = plugin.getDataManager().getUUIDByName(targetName);
         if (targetUUID == null) return;
 
         List<DeathRecord> records = plugin.getDataManager().getDeathRecords(targetUUID);
         if (slot < 0 || slot >= records.size()) return;
 
-        DeathRecord record = records.get(slot);
         deathIndexCache.put(admin.getUniqueId(), slot);
-        DeathPreviewGUI.open(plugin, admin, record, slot, targetName);
+        DeathPreviewGUI.open(plugin, admin, records.get(slot), slot, targetName);
     }
 
     public static String getTargetName(UUID adminUUID) {
@@ -150,24 +147,11 @@ public class DeathListGUI {
         return deathIndexCache.getOrDefault(adminUUID, -1);
     }
 
-    public static UUID getUUIDByName(String name) {
-        Player online = Bukkit.getPlayerExact(name);
-        if (online != null) return online.getUniqueId();
-
-        for (OfflinePlayer op : Bukkit.getOfflinePlayers()) {
-            if (op.getName() != null && name.equalsIgnoreCase(op.getName())) {
-                return op.getUniqueId();
-            }
-        }
-        return null;
-    }
-
     /**
-     * Tworzy komponent z wyłączoną kursywą.
-     * Opakowuje w rodzica z ITALIC=false, dzieci dziedziczą.
+     * Tworzy komponent z wyłączoną kursywą
      */
     public static Component text(String legacyText) {
-        if (legacyText.isEmpty()) {
+        if (legacyText == null || legacyText.isEmpty()) {
             return Component.empty().decoration(TextDecoration.ITALIC, false);
         }
         return Component.empty()
