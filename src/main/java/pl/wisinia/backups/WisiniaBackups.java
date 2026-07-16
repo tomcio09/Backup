@@ -19,7 +19,6 @@ public class WisiniaBackups extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Tworzenie folderu pluginu jeśli nie istnieje
         if (!getDataFolder().exists()) {
             getDataFolder().mkdirs();
         }
@@ -36,6 +35,11 @@ public class WisiniaBackups extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
+        // Auto-save co 5 minut (asynchronicznie)
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+            dataManager.saveAsync();
+        }, 6000L, 6000L);
+
         boolean antylogoutAvailable = getServer().getPluginManager().getPlugin("AnacodeAntylogout") != null;
         getLogger().info("AnacodeAntylogout: " + (antylogoutAvailable ? "dostępny" : "niedostępny"));
         getLogger().info("WisiniaBackups został włączony!");
@@ -43,8 +47,9 @@ public class WisiniaBackups extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Synchroniczny zapis przy wyłączaniu - musi poczekać
         if (dataManager != null) {
-            dataManager.save();
+            dataManager.saveSynchronous();
         }
         getLogger().info("WisiniaBackups został wyłączony!");
     }
