@@ -27,9 +27,10 @@ public class DeathListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         UUID uuid = player.getUniqueId();
+        String playerName = player.getName();
         DataManager dm = plugin.getDataManager();
 
-        // Zapisz ekwipunek PRZED śmiercią (itemy są dostępne w inventory podczas death event)
+        // Zapisz ekwipunek - szybkie klonowanie
         ItemStack[] inv = new ItemStack[36];
         for (int i = 0; i < 36; i++) {
             ItemStack item = player.getInventory().getItem(i);
@@ -37,40 +38,42 @@ public class DeathListener implements Listener {
         }
 
         ItemStack[] armor = new ItemStack[4];
-        armor[0] = player.getInventory().getBoots() != null ? player.getInventory().getBoots().clone() : null;
-        armor[1] = player.getInventory().getLeggings() != null ? player.getInventory().getLeggings().clone() : null;
-        armor[2] = player.getInventory().getChestplate() != null ? player.getInventory().getChestplate().clone() : null;
-        armor[3] = player.getInventory().getHelmet() != null ? player.getInventory().getHelmet().clone() : null;
+        ItemStack boots = player.getInventory().getBoots();
+        ItemStack legs = player.getInventory().getLeggings();
+        ItemStack chest = player.getInventory().getChestplate();
+        ItemStack helmet = player.getInventory().getHelmet();
+        armor[0] = boots != null ? boots.clone() : null;
+        armor[1] = legs != null ? legs.clone() : null;
+        armor[2] = chest != null ? chest.clone() : null;
+        armor[3] = helmet != null ? helmet.clone() : null;
 
         ItemStack offHand = player.getInventory().getItemInOffHand();
-        ItemStack offHandClone = (offHand != null && !offHand.getType().isAir()) ? offHand.clone() : null;
+        ItemStack offHandClone = (!offHand.getType().isAir()) ? offHand.clone() : null;
 
         // Ustal typ śmierci
         DeathRecord.DeathType deathType;
         UUID killerUUID = null;
         String killerName = null;
 
+        // Sprawdź AntylogoutAPI
         AntylogoutAPI.DeathType antylogoutType = AntylogoutAPI.getDeathType(uuid);
 
         if (antylogoutType == AntylogoutAPI.DeathType.LOGOUT_DURING_COMBAT) {
             deathType = DeathRecord.DeathType.LOGOUT;
             killerUUID = AntylogoutAPI.getKillerOf(uuid);
             if (killerUUID != null) {
-                Player killer = Bukkit.getPlayer(killerUUID);
-                killerName = killer != null ? killer.getName() : getOfflinePlayerName(killerUUID);
+                killerName = getPlayerName(killerUUID);
             }
         } else if (antylogoutType == AntylogoutAPI.DeathType.COMBAT_DEATH) {
             deathType = DeathRecord.DeathType.KILL;
             killerUUID = AntylogoutAPI.getKillerOf(uuid);
             if (killerUUID != null) {
-                Player killer = Bukkit.getPlayer(killerUUID);
-                killerName = killer != null ? killer.getName() : getOfflinePlayerName(killerUUID);
+                killerName = getPlayerName(killerUUID);
             } else if (event.getEntity().getKiller() != null) {
                 killerUUID = event.getEntity().getKiller().getUniqueId();
                 killerName = event.getEntity().getKiller().getName();
             }
         } else {
-            // NORMAL - sprawdź czy był killer
             if (event.getEntity().getKiller() != null) {
                 deathType = DeathRecord.DeathType.KILL;
                 killerUUID = event.getEntity().getKiller().getUniqueId();
@@ -81,24 +84,29 @@ public class DeathListener implements Listener {
         }
 
         int deathNumber = dm.getNextDeathNumber(uuid);
+        LocalDateTime now = LocalDateTime.now();
+
+        // Cache nick gracza
+        dm.cachePlayer(playerName, uuid);
+        if (killerUUID != null && killerName != null) {
+            dm.cachePlayer(killerName, killerUUID);
+        }
 
         DeathRecord record = new DeathRecord(
-                uuid,
-                player.getName(),
-                deathType,
-                LocalDateTime.now(),
-                killerUUID,
-                killerName,
-                inv,
-                armor,
-                offHandClone,
-                deathNumber
+                uuid, playerName, deathType, now,
+                killerUUID, killerName,
+                inv, armor, offHandClone, deathNumber
         );
 
+        // Dodanie rekordu (zapis async w środku)
         dm.addDeathRecord(record);
     }
 
-    private String getOfflinePlayerName(UUID uuid) {
+    private String getPlayerName(UUID uuid) {
+        Player online = Bukkit.getPlayer(uuid);
+        if (online != null) return online.getName();
+
+        // Szybki lookup bez iterowania
         org.bukkit.OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
         return op.getName() != null ? op.getName() : uuid.toString().substring(0, 8);
     }
