@@ -41,7 +41,7 @@ public class DeathPreviewGUI {
             }
         }
 
-        // Rząd 5: Hotbar (inventory sloty 0-8) -> GUI sloty 36-44
+        // Rząd 5: Hotbar (sloty 0-8) -> GUI sloty 36-44
         for (int i = 0; i < 9; i++) {
             ItemStack item = record.getInventory()[i];
             if (item != null) {
@@ -87,15 +87,15 @@ public class DeathPreviewGUI {
 
         if (record == null || targetName == null) return;
 
-        // Powrót - slot 49
+        // Powrót
         if (slot == 49 && clickedItem.getType() == Material.BARRIER) {
             DeathListGUI.open(plugin, admin, targetName);
             return;
         }
 
-        // Nadaj backup - slot 53
+        // Nadaj backup
         if (slot == 53 && clickedItem.getType() == Material.LIME_DYE) {
-            UUID targetUUID = DeathListGUI.getUUIDByName(targetName);
+            UUID targetUUID = plugin.getDataManager().getUUIDByName(targetName);
             if (targetUUID == null) {
                 admin.sendMessage(LEGACY.deserialize("&cNie znaleziono gracza!"));
                 return;
@@ -116,15 +116,13 @@ public class DeathPreviewGUI {
             return;
         }
 
-        // Kliknięcie w item - kopiuj do admina
-        if (slot != 49 && slot != 53) {
-            if (clickedItem != null && !clickedItem.getType().isAir()) {
-                if (admin.getInventory().firstEmpty() == -1) {
-                    admin.sendMessage(LEGACY.deserialize("&cNie masz miejsca w ekwipunku!"));
-                    return;
-                }
-                admin.getInventory().addItem(clickedItem.clone());
+        // Kopiuj item do eq admina
+        if (slot != 49 && slot != 53 && clickedItem != null && !clickedItem.getType().isAir()) {
+            if (admin.getInventory().firstEmpty() == -1) {
+                admin.sendMessage(LEGACY.deserialize("&cNie masz miejsca w ekwipunku!"));
+                return;
             }
+            admin.getInventory().addItem(clickedItem.clone());
         }
     }
 
@@ -155,12 +153,8 @@ public class DeathPreviewGUI {
         player.openInventory(inv);
     }
 
-    /**
-     * Tworzy komponent z wyłączoną kursywą.
-     * Rodzic Component.empty() z ITALIC=false, dziecko dziedziczy.
-     */
     private static Component text(String legacyText) {
-        if (legacyText.isEmpty()) {
+        if (legacyText == null || legacyText.isEmpty()) {
             return Component.empty().decoration(TextDecoration.ITALIC, false);
         }
         return Component.empty()
